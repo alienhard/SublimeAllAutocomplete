@@ -1,7 +1,9 @@
-Better Sublime Text 2 Autocompletion
-====================================
+All Autocomplete Sublime Text 2
+===========================================================
 
-This package extends the default autocompletion behavior of Sublime. It adds matches from all open files of the current window. By default Sublime only considers words found in the current file.
+Extends the default autocomplete to find matches in all open files of the current window.
+
+By default Sublime only considers words found in the current file.
 
 
 Install
