@@ -10,7 +10,7 @@ class AllAutocomplete(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
         words = set()
-        views = [v for v in sublime.active_window().views() if v.id() != view.id()]
+        views = [v for v in sublime.active_window().views()]
         for v in views:
             words.update(v.extract_completions(prefix))
         matches = [(w, w) for w in words]
