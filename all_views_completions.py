@@ -25,16 +25,14 @@ class AllAutocomplete(sublime_plugin.EventListener):
 def fix_truncation(view, words):
     fixed_words = set()
     for w in words:
-        #The word is truncated if and only if it cannot be found with a word boundary following it
-        truncated = view.find(w + r'\b', 0) is None
+        #The word is truncated if and only if it cannot be found with a word boundary before and after
+        truncated = view.find(r'\b' + w + r'\b', 0) is None
         if truncated:
             #Truncation is always by a single character, so we extend the word by one word character before a word boundary
             extended_words = []
-            view.find_all(w + r'\w\b', 0, "$0", extended_words)
+            view.find_all(r'\b' + w + r'\w\b', 0, "$0", extended_words)
             fixed_words.update(extended_words)
         else:
             #Pass through non-truncated words
             fixed_words.add(w)
     return fixed_words
-
-
