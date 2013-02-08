@@ -12,6 +12,10 @@ MAX_VIEWS = 25
 MAX_WORDS = 10
 MIN_WORD_SIZE = 3
 
+def php_dollar_fix(s):
+    if s.startswith('$'):
+        s = '\\$' + s[1:]
+    return s
 
 class AllAutocomplete(sublime_plugin.EventListener):
 
@@ -28,7 +32,7 @@ class AllAutocomplete(sublime_plugin.EventListener):
             view_words = view_words[0:MAX_WORDS]
             view_words = fix_truncation(v, view_words)
             words.update(view_words)
-        matches = [(w, w) for w in words]
+        matches = [(w, php_dollar_fix(w)) for w in words]
         return matches
 
 
