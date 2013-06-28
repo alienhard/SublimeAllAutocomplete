@@ -10,6 +10,7 @@ import re
 MAX_VIEWS = 20
 MAX_WORDS_PER_VIEW = 100
 MIN_WORD_SIZE = 3
+MAX_WORD_SIZE = 40
 
 
 class AllAutocomplete(sublime_plugin.EventListener):
@@ -52,8 +53,9 @@ def without_duplicates(words):
 def fix_truncation(view, words):
     fixed_words = []
     words_to_fix = []
+    word_length = len(w)
     for w in words:
-        if len(w) >= MIN_WORD_SIZE:
+        if  (word_length >= MIN_WORD_SIZE) and (word_length <= MAX_WORD_SIZE):
             words_to_fix.append(w)
         else:
             fixed_words.append(w)
