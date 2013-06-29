@@ -4,13 +4,15 @@
 import sublime_plugin
 import sublime
 import re
-
+import time
 
 # limits to prevent bogging down the system
+MIN_WORD_SIZE = 3
+MAX_WORD_SIZE = 30
+
 MAX_VIEWS = 20
 MAX_WORDS_PER_VIEW = 100
-MIN_WORD_SIZE = 3
-
+MAX_FIX_TIME_SECS_PER_VIEW = 0.01
 
 class AllAutocomplete(sublime_plugin.EventListener):
 
@@ -28,7 +30,7 @@ class AllAutocomplete(sublime_plugin.EventListener):
                 view_words = v.extract_completions(prefix, locations[0])
             else:
                 view_words = v.extract_completions(prefix)
-            view_words = view_words[0:MAX_WORDS_PER_VIEW]
+            view_words = filter_words(view_words)
             view_words = fix_truncation(v, view_words)
             words += view_words
 
@@ -36,6 +38,9 @@ class AllAutocomplete(sublime_plugin.EventListener):
         matches = [(w, w) for w in words]
         return matches
 
+def filter_words(words):
+    words = words[0:MAX_WORDS_PER_VIEW]
+    return [w for w in words if MIN_WORD_SIZE <= len(w) <= MAX_WORD_SIZE]
 
 # keeps first instance of every word and retains the original order
 # (n^2 but should not be a problem as len(words) <= MAX_VIEWS*MAX_WORDS_PER_VIEW)
@@ -51,14 +56,9 @@ def without_duplicates(words):
 # in some types of files.
 def fix_truncation(view, words):
     fixed_words = []
-    words_to_fix = []
-    for w in words:
-        if len(w) >= MIN_WORD_SIZE:
-            words_to_fix.append(w)
-        else:
-            fixed_words.append(w)
+    start_time = time.time()
 
-    for w in words_to_fix:
+    for i, w in enumerate(words):
         #The word is truncated if and only if it cannot be found with a word boundary before and after
 
         # this fails to match strings with trailing non-alpha chars, like
@@ -77,4 +77,10 @@ def fix_truncation(view, words):
         else:
             #Pass through non-truncated words
             fixed_words.append(w)
+
+        # if too much time is spent in here, bail out,
+        # and don't bother fixing the remaining words
+        if time.time() - start_time > MAX_FIX_TIME_SECS_PER_VIEW:
+            return fixed_words + words[i+1:]
+
     return fixed_words
