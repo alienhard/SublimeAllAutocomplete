@@ -63,7 +63,8 @@ def fix_truncation(view, words):
 
         # this fails to match strings with trailing non-alpha chars, like
         # 'foo?' or 'bar!', which are common for instance in Ruby.
-        truncated = view.find(r'\b' + re.escape(w) + r'\b', 0) is None
+        match = view.find(r'\b' + re.escape(w) + r'\b', 0)
+        truncated = is_empty_match(match)
         if truncated:
             #Truncation is always by a single character, so we extend the word by one word character before a word boundary
             extended_words = []
@@ -84,3 +85,10 @@ def fix_truncation(view, words):
             return fixed_words + words[i+1:]
 
     return fixed_words
+
+if sublime.version() >= '3000':
+  def is_empty_match(match):
+    return match.empty()
+else:
+  def is_empty_match(match):
+    return match is None
