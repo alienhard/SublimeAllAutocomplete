@@ -12,7 +12,7 @@ Install
 If you have Package Control installed in Sublime just press ctrl+shift+p (Windows, Linux) or cmd+shift+p (OS X) to open the Command Pallete.
 Start typing 'install' to select 'Package Control: Install Package', then search for AllAutocomplete and select it. That's it.
 
-You can also install this package manually by entering the Packages directory of Sublime Text 2 and issuing on a terminal:
+You can also install this package manually by entering the Packages directory of Sublime Text 2/3 and issuing on a terminal:
 
     git clone https://github.com/alienhard/SublimeAllAutocomplete
 
