@@ -35,7 +35,7 @@ class AllAutocomplete(sublime_plugin.EventListener):
             words += view_words
 
         words = without_duplicates(words)
-        matches = [(w, w) for w in words]
+        matches = [(w, w.replace('$', '\\$')) for w in words]
         return matches
 
 def filter_words(words):
