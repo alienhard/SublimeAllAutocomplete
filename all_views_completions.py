@@ -8,7 +8,7 @@ import time
 
 # limits to prevent bogging down the system
 MIN_WORD_SIZE = 3
-MAX_WORD_SIZE = 30
+MAX_WORD_SIZE = 50
 
 MAX_VIEWS = 20
 MAX_WORDS_PER_VIEW = 100
