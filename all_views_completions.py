@@ -15,9 +15,35 @@ MAX_WORDS_PER_VIEW = 100
 MAX_FIX_TIME_SECS_PER_VIEW = 0.01
 
 
+SETTINGS_NAME = 'AllAutocomplete.sublime-settings'
+plugin_settings = None
+
+
 class AllAutocomplete(sublime_plugin.EventListener):
 
+    dont_show_in_scopes = ''
+    DONT_SHOW_IN_SCOPES_SETTING_NAME = 'dont_show_in_scopes'
+
+    @staticmethod
+    def initialize():
+        AllAutocomplete.update_settings()
+        plugin_settings.add_on_change(AllAutocomplete.DONT_SHOW_IN_SCOPES_SETTING_NAME,
+                                      AllAutocomplete.update_settings)
+
+    @staticmethod
+    def uninitialize():
+        plugin_settings.clear_on_change(AllAutocomplete.DONT_SHOW_IN_SCOPES_SETTING_NAME)
+
+    @staticmethod
+    def update_settings():
+        list_of_scopes = plugin_settings.get(AllAutocomplete.DONT_SHOW_IN_SCOPES_SETTING_NAME, [])
+        AllAutocomplete.dont_show_in_scopes = ', '.join(list_of_scopes)
+
     def on_query_completions(self, view, prefix, locations):
+        if AllAutocomplete.dont_show_in_scopes and \
+           view.score_selector(0, AllAutocomplete.dont_show_in_scopes):
+            return None
+
         words = []
 
         # Limit number of views but always include the active view. This
@@ -38,6 +64,16 @@ class AllAutocomplete(sublime_plugin.EventListener):
         words = without_duplicates(words)
         matches = [(w, w.replace('$', '\\$')) for w in words]
         return matches
+
+
+def plugin_loaded():
+    global plugin_settings
+    plugin_settings = sublime.load_settings(SETTINGS_NAME)
+    AllAutocomplete.initialize()
+
+
+def plugin_unloaded():
+    AllAutocomplete.uninitialize()
 
 
 def filter_words(words):
