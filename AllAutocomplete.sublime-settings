@@ -1,0 +1,6 @@
+{
+    // List of scopes for which autocomplete suggestions will not be augmented with
+    // suggestions from all views. If the first position in the view matches one of these
+    // scopes, AllAutocomplete will not add any suggestions.
+    "dont_show_in_scopes": []
+}
