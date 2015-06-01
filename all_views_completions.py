@@ -5,6 +5,7 @@ import sublime_plugin
 import sublime
 import re
 import time
+from os.path import basename
 
 # limits to prevent bogging down the system
 MIN_WORD_SIZE = 3
@@ -32,10 +33,15 @@ class AllAutocomplete(sublime_plugin.EventListener):
                 view_words = v.extract_completions(prefix)
             view_words = filter_words(view_words)
             view_words = fix_truncation(v, view_words)
-            words += view_words
+            words += [(w, v) for w in view_words]
 
         words = without_duplicates(words)
-        matches = [(w, w.replace('$', '\\$')) for w in words]
+        matches = []
+        for w, v in words:
+            if v.id != view.id:
+                matches.append((w + ' (%s)' % basename(v.file_name()), w.replace('$', '\\$')))
+            else:
+                matches.append((w, w.replace('$', '\\$')))
         return matches
 
 def filter_words(words):
@@ -46,9 +52,11 @@ def filter_words(words):
 # (n^2 but should not be a problem as len(words) <= MAX_VIEWS*MAX_WORDS_PER_VIEW)
 def without_duplicates(words):
     result = []
-    for w in words:
-        if w not in result:
-            result.append(w)
+    used_words = []
+    for w, v in words:
+        if w not in used_words:
+            used_words.append(w)
+            result.append((w, v))
     return result
 
 
