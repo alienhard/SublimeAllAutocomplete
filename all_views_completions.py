@@ -15,6 +15,7 @@ MAX_VIEWS = 20
 MAX_WORDS_PER_VIEW = 100
 MAX_FIX_TIME_SECS_PER_VIEW = 0.01
 
+
 class AllAutocomplete(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
@@ -38,15 +39,18 @@ class AllAutocomplete(sublime_plugin.EventListener):
         words = without_duplicates(words)
         matches = []
         for w, v in words:
-            if v.id != view.id:
-                matches.append((w + ' (%s)' % basename(v.file_name()), w.replace('$', '\\$')))
-            else:
-                matches.append((w, w.replace('$', '\\$')))
+            trigger = w
+            contents = w.replace('$', '\\$')
+            if v.id != view.id and v.file_name():
+                trigger += '\t(%s)' % basename(v.file_name())
+            matches.append((trigger, contents))
         return matches
+
 
 def filter_words(words):
     words = words[0:MAX_WORDS_PER_VIEW]
     return [w for w in words if MIN_WORD_SIZE <= len(w) <= MAX_WORD_SIZE]
+
 
 # keeps first instance of every word and retains the original order
 # (n^2 but should not be a problem as len(words) <= MAX_VIEWS*MAX_WORDS_PER_VIEW)
@@ -94,9 +98,10 @@ def fix_truncation(view, words):
 
     return fixed_words
 
+
 if sublime.version() >= '3000':
-  def is_empty_match(match):
-    return match.empty()
+    def is_empty_match(match):
+        return match.empty()
 else:
-  def is_empty_match(match):
-    return match is None
+    def is_empty_match(match):
+        return match is None
