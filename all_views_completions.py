@@ -5,6 +5,8 @@ import sublime_plugin
 import sublime
 import re
 import time
+import datetime
+import os
 from os.path import basename
 
 # limits to prevent bogging down the system
@@ -14,6 +16,53 @@ MAX_WORD_SIZE = 50
 MAX_VIEWS = 20
 MAX_WORDS_PER_VIEW = 100
 MAX_FIX_TIME_SECS_PER_VIEW = 0.01
+
+
+# Debugging
+startTime = datetime.datetime.now()
+print_debug_lastTime = startTime.microsecond
+
+# Enable editor debug messages: (bitwise)
+#
+# 0  - Disabled debugging.
+# 1  - Errors messages.
+# 2  - Outputs when it starts a file parsing.
+# 4  - General messages.
+# 8  - Analyzer parser.
+# 15 - All debugging levels at the same time.
+g_debug_level = 0
+
+
+def plugin_loaded():
+
+    global g_isAmxModX_PackageEnabled
+
+    userSettings               = sublime.load_settings("Preferences.sublime-settings")
+    g_isAmxModX_PackageEnabled = is_package_enabled( userSettings, "amxmodx" )
+
+def is_amxmodx_file(view) :
+    return view.match_selector(0, 'source.sma')
+
+def is_package_enabled( userSettings, package_name ):
+
+    print_debug(1, "is_package_enabled = " + sublime.packages_path()
+            + "/All Autocomplete/ is dir? " \
+            + str( os.path.isdir( sublime.packages_path() + "/" + package_name ) ))
+
+    print_debug(1, "is_package_enabled = " + sublime.installed_packages_path()
+            + "/All Autocomplete.sublime-package is file? " \
+            + str( os.path.isfile( sublime.installed_packages_path() + "/" + package_name + ".sublime-package" ) ))
+
+    ignoredPackages = userSettings.get('ignored_packages')
+
+    if ignoredPackages is not None:
+
+        return ( os.path.isdir( sublime.packages_path() + "/" + package_name ) \
+                or os.path.isfile( sublime.installed_packages_path() + "/" + package_name + ".sublime-package" ) ) \
+                and not package_name in ignoredPackages
+
+    return os.path.isdir( sublime.packages_path() + "/" + package_name ) \
+            or os.path.isfile( sublime.installed_packages_path() + "/" + package_name + ".sublime-package" )
 
 
 class AllAutocomplete(sublime_plugin.EventListener):
@@ -27,8 +76,17 @@ class AllAutocomplete(sublime_plugin.EventListener):
         views = [view] + other_views
         views = views[0:MAX_VIEWS]
 
+        is_the_current_view = False
+
         for v in views:
-            if len(locations) > 0 and v.id == view.id:
+
+            is_the_current_view = v.id == view.id
+
+            # Avoid duplicated entries for the current view, if it is an AMXX file
+            if g_isAmxModX_PackageEnabled and is_the_current_view and is_amxmodx_file( v ):
+                continue
+
+            if len(locations) > 0 and is_the_current_view:
                 view_words = v.extract_completions(prefix, locations[0])
             else:
                 view_words = v.extract_completions(prefix)
@@ -105,3 +163,24 @@ if sublime.version() >= '3000':
 else:
     def is_empty_match(match):
         return match is None
+
+
+def print_debug(level, msg) :
+#{
+    global print_debug_lastTime
+    currentTime = datetime.datetime.now().microsecond
+
+    # You can access global variables without the global keyword.
+    if g_debug_level & level != 0:
+
+        print( "[AMXX-Editor] " \
+                + str( datetime.datetime.now().hour ) + ":" \
+                + str( datetime.datetime.now().minute ) + ":" \
+                + str( datetime.datetime.now().second ) + ":" \
+                + str( currentTime ) \
+                + "%7s " % str( currentTime - print_debug_lastTime ) \
+                + msg )
+
+        print_debug_lastTime = currentTime
+
+
