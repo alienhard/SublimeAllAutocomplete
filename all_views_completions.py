@@ -32,13 +32,20 @@ print_debug_lastTime = startTime.microsecond
 # 15 - All debugging levels at the same time.
 g_debug_level = 0
 
+g_word_autocomplete = False
+g_is_amxmodx_enabled = False
+g_use_all_autocomplete = False
+
 
 def plugin_loaded():
 
-    global g_isAmxModX_PackageEnabled
+    on_settings_modified();
 
-    userSettings               = sublime.load_settings("Preferences.sublime-settings")
-    g_isAmxModX_PackageEnabled = is_package_enabled( userSettings, "amxmodx" )
+    userSettings = sublime.load_settings("Preferences.sublime-settings")
+    amxxSettings = sublime.load_settings("amxx.sublime-settings")
+
+    amxxSettings.add_on_change('amxx', on_settings_modified)
+    userSettings.add_on_change('Preferences', on_settings_modified)
 
 def is_amxmodx_file(view) :
     return view.match_selector(0, 'source.sma')
@@ -64,10 +71,32 @@ def is_package_enabled( userSettings, package_name ):
     return os.path.isdir( sublime.packages_path() + "/" + package_name ) \
             or os.path.isfile( sublime.installed_packages_path() + "/" + package_name + ".sublime-package" )
 
+def on_settings_modified():
+#{
+    print_debug( 1, "on_settings_modified" )
+
+    global g_word_autocomplete
+    global g_is_amxmodx_enabled
+    global g_use_all_autocomplete
+
+    userSettings = sublime.load_settings("Preferences.sublime-settings")
+    amxxSettings = sublime.load_settings("amxx.sublime-settings")
+
+    # When the `g_use_all_autocomplete` is set to true on the package `amxmodx`, we use this package
+    # to handle all the completions on the current view file.
+    g_use_all_autocomplete = amxxSettings.get('use_all_autocomplete', False)
+
+    g_word_autocomplete  = amxxSettings.get('word_autocomplete', False)
+    g_is_amxmodx_enabled = is_package_enabled( userSettings, "amxmodx" )
+
 
 class AllAutocomplete(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
+
+        if not g_word_autocomplete:
+            return None
+
         words = []
 
         # Limit number of views but always include the active view. This
@@ -77,13 +106,16 @@ class AllAutocomplete(sublime_plugin.EventListener):
         views = views[0:MAX_VIEWS]
 
         is_the_current_view = False
+        not_always_use_autocomplete = g_is_amxmodx_enabled and not g_use_all_autocomplete
 
         for v in views:
 
             is_the_current_view = v.id == view.id
 
             # Avoid duplicated entries for the current view, if it is an AMXX file
-            if g_isAmxModX_PackageEnabled and is_the_current_view and is_amxmodx_file( v ):
+            if not_always_use_autocomplete \
+                    and is_the_current_view \
+                    and is_amxmodx_file( v ):
                 continue
 
             if len(locations) > 0 and is_the_current_view:
