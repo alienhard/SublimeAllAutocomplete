@@ -9,14 +9,6 @@ import datetime
 import os
 from os.path import basename
 
-# limits to prevent bogging down the system
-MIN_WORD_SIZE = 3
-MAX_WORD_SIZE = 50
-
-MAX_VIEWS = 20
-MAX_WORDS_PER_VIEW = 100
-MAX_FIX_TIME_SECS_PER_VIEW = 0.01
-
 
 # Debugging
 startTime = datetime.datetime.now()
@@ -25,16 +17,21 @@ print_debug_lastTime = startTime.microsecond
 # Enable editor debug messages: (bitwise)
 #
 # 0  - Disabled debugging.
-# 1  - Errors messages.
-# 2  - Outputs when it starts a file parsing.
-# 4  - General messages.
-# 8  - Analyzer parser.
-# 15 - All debugging levels at the same time.
+# 1  - Basic messages.
 g_debug_level = 0
 
 g_word_autocomplete = False
 g_is_amxmodx_enabled = False
 g_use_all_autocomplete = False
+
+
+# limits to prevent bogging down the system
+MIN_WORD_SIZE = 3
+MAX_WORD_SIZE = 50
+
+MAX_VIEWS = 20
+MAX_WORDS_PER_VIEW = 100
+MAX_FIX_TIME_SECS_PER_VIEW = 0.01
 
 
 def plugin_loaded():
@@ -52,11 +49,11 @@ def is_amxmodx_file(view) :
 
 def is_package_enabled( userSettings, package_name ):
 
-    print_debug(1, "is_package_enabled = " + sublime.packages_path()
+    print_debug( 1, "is_package_enabled = " + sublime.packages_path()
             + "/All Autocomplete/ is dir? " \
             + str( os.path.isdir( sublime.packages_path() + "/" + package_name ) ))
 
-    print_debug(1, "is_package_enabled = " + sublime.installed_packages_path()
+    print_debug( 1, "is_package_enabled = " + sublime.installed_packages_path()
             + "/All Autocomplete.sublime-package is file? " \
             + str( os.path.isfile( sublime.installed_packages_path() + "/" + package_name + ".sublime-package" ) ))
 
@@ -73,20 +70,10 @@ def is_package_enabled( userSettings, package_name ):
 
 def on_settings_modified():
 #{
-    print_debug( 1, "on_settings_modified" )
-
-    global g_word_autocomplete
+    print_debug( 1, "AllAutoComplete::on_settings_modified" )
     global g_is_amxmodx_enabled
-    global g_use_all_autocomplete
 
-    userSettings = sublime.load_settings("Preferences.sublime-settings")
-    amxxSettings = sublime.load_settings("amxx.sublime-settings")
-
-    # When the `g_use_all_autocomplete` is set to true on the package `amxmodx`, we use this package
-    # to handle all the completions on the current view file.
-    g_use_all_autocomplete = amxxSettings.get('use_all_autocomplete', False)
-
-    g_word_autocomplete  = amxxSettings.get('word_autocomplete', False)
+    userSettings         = sublime.load_settings("Preferences.sublime-settings")
     g_is_amxmodx_enabled = is_package_enabled( userSettings, "amxmodx" )
 
 
@@ -94,7 +81,7 @@ class AllAutocomplete(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
 
-        if not g_word_autocomplete:
+        if g_is_amxmodx_enabled:
             return None
 
         words = []
@@ -106,17 +93,10 @@ class AllAutocomplete(sublime_plugin.EventListener):
         views = views[0:MAX_VIEWS]
 
         is_the_current_view = False
-        not_always_use_autocomplete = g_is_amxmodx_enabled and not g_use_all_autocomplete
 
         for v in views:
 
             is_the_current_view = v.id == view.id
-
-            # Avoid duplicated entries for the current view, if it is an AMXX file
-            if not_always_use_autocomplete \
-                    and is_the_current_view \
-                    and is_amxmodx_file( v ):
-                continue
 
             if len(locations) > 0 and is_the_current_view:
                 view_words = v.extract_completions(prefix, locations[0])
@@ -128,12 +108,15 @@ class AllAutocomplete(sublime_plugin.EventListener):
 
         words = without_duplicates(words)
         matches = []
+
         for w, v in words:
             trigger = w
             contents = w.replace('$', '\\$')
+
             if v.id != view.id and v.file_name():
                 trigger += '\t(%s)' % basename(v.file_name())
             matches.append((trigger, contents))
+
         return matches
 
 
