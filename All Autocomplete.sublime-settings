@@ -1,0 +1,7 @@
+{
+	// An array of syntaxes to exclude from checking. Can be partial string, like "css"
+	// "exclude_scopes_from_complete_triggers": [
+	// 	"css",
+	// 	"scss"
+	// ]
+}

@@ -7,6 +7,9 @@ import re
 import time
 from os.path import basename
 
+settings = sublime.load_settings('All Autocomplete.sublime-settings')
+exclude_scopes = settings.get("exclude_scopes_from_complete_triggers", [])
+
 # limits to prevent bogging down the system
 MIN_WORD_SIZE = 3
 MAX_WORD_SIZE = 50
@@ -19,6 +22,12 @@ MAX_FIX_TIME_SECS_PER_VIEW = 0.01
 class AllAutocomplete(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
+
+        # bypass if in ignored syntax list
+        for exclude_scope in exclude_scopes:
+            if view.scope_name(locations[0]).find(exclude_scope) != -1:
+                return
+
         words = []
 
         # Limit number of views but always include the active view. This
