@@ -15,7 +15,7 @@
                             {
                                 "command": "open_file",
                                 "args": {
-                                    "file": "${packages}/SublimeAllAutocomplete/All Autocomplete.sublime-settings"
+                                    "file": "${packages}/All Autocomplete/All Autocomplete.sublime-settings"
                                 },
                                 "caption": "Settings – Default"
                             },

@@ -7,9 +7,6 @@ import re
 import time
 from os.path import basename
 
-settings = sublime.load_settings('All Autocomplete.sublime-settings')
-exclude_scopes = settings.get("exclude_scopes_from_complete_triggers", [])
-
 # limits to prevent bogging down the system
 MIN_WORD_SIZE = 3
 MAX_WORD_SIZE = 50
@@ -19,15 +16,16 @@ MAX_WORDS_PER_VIEW = 100
 MAX_FIX_TIME_SECS_PER_VIEW = 0.01
 
 
+def plugin_loaded():
+    global settings
+    settings = sublime.load_settings('All Autocomplete.sublime-settings')
+
 class AllAutocomplete(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
-
-        # bypass if in ignored syntax list
-        for exclude_scope in exclude_scopes:
-            if view.scope_name(locations[0]).find(exclude_scope) != -1:
-                return
-
+        if is_disabled_in(view.scope_name(locations[0])):
+            return []
+         
         words = []
 
         # Limit number of views but always include the active view. This
@@ -46,6 +44,7 @@ class AllAutocomplete(sublime_plugin.EventListener):
             words += [(w, v) for w in view_words]
 
         words = without_duplicates(words)
+
         matches = []
         for w, v in words:
             trigger = w
@@ -55,6 +54,13 @@ class AllAutocomplete(sublime_plugin.EventListener):
             matches.append((trigger, contents))
         return matches
 
+
+def is_disabled_in(scope):
+    excluded_scopes = settings.get("exclude_from_completion", [])
+    for excluded_scope in excluded_scopes:
+        if scope.find(excluded_scope) != -1:
+            return True
+    return False
 
 def filter_words(words):
     words = words[0:MAX_WORDS_PER_VIEW]
@@ -112,5 +118,6 @@ if sublime.version() >= '3000':
     def is_empty_match(match):
         return match.empty()
 else:
+    plugin_loaded()
     def is_empty_match(match):
         return match is None

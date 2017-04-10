@@ -1,7 +1,8 @@
 {
-	// An array of syntaxes to exclude from checking. Can be partial string, like "css"
-	// "exclude_scopes_from_complete_triggers": [
-	// 	"css",
-	// 	"scss"
+	// An array of syntax names to exclude from being autocompleted.
+	// Can be a partial string, for instance, "css" would match scss code.
+	// "exclude_from_completion": [
+	//      "css",
+	//      "scss"
 	// ]
 }
