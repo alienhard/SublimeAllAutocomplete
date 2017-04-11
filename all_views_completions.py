@@ -33,7 +33,11 @@ class AllAutocomplete(sublime_plugin.EventListener):
         other_views = [v for v in sublime.active_window().views() if v.id != view.id]
         views = [view] + other_views
         views = views[0:MAX_VIEWS]
-
+        
+        #Fix the problem that can not match upper case word,when prefix is in lower case.
+        #For example, when prefix is "hello",the word "Hello" is unmatched.
+        prefix=prefix.upper()
+        
         for v in views:
             if len(locations) > 0 and v.id == view.id:
                 view_words = v.extract_completions(prefix, locations[0])
