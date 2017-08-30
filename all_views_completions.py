@@ -76,6 +76,8 @@ def on_settings_modified():
     userSettings         = sublime.load_settings("Preferences.sublime-settings")
     g_is_amxmodx_enabled = is_package_enabled( userSettings, "amxmodx" )
 
+    global settings
+    settings = sublime.load_settings('All Autocomplete.sublime-settings')
 
 class AllAutocomplete(sublime_plugin.EventListener):
 
@@ -83,6 +85,9 @@ class AllAutocomplete(sublime_plugin.EventListener):
 
         if g_is_amxmodx_enabled:
             return None
+
+        if is_disabled_in(view.scope_name(locations[0])):
+            return []
 
         words = []
 
@@ -107,6 +112,7 @@ class AllAutocomplete(sublime_plugin.EventListener):
             words += [(w, v) for w in view_words]
 
         words = without_duplicates(words)
+
         matches = []
 
         for w, v in words:
@@ -119,6 +125,13 @@ class AllAutocomplete(sublime_plugin.EventListener):
 
         return matches
 
+
+def is_disabled_in(scope):
+    excluded_scopes = settings.get("exclude_from_completion", [])
+    for excluded_scope in excluded_scopes:
+        if scope.find(excluded_scope) != -1:
+            return True
+    return False
 
 def filter_words(words):
     words = words[0:MAX_WORDS_PER_VIEW]
@@ -176,6 +189,7 @@ if sublime.version() >= '3000':
     def is_empty_match(match):
         return match.empty()
 else:
+    plugin_loaded()
     def is_empty_match(match):
         return match is None
 
