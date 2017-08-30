@@ -1,0 +1,8 @@
+{
+	// An array of syntax names to exclude from being autocompleted.
+	// Can be a partial string, for instance, "css" would match scss code.
+	// "exclude_from_completion": [
+	//      "css",
+	//      "scss"
+	// ]
+}
