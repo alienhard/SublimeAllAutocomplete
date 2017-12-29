@@ -9,20 +9,11 @@ import datetime
 import os
 from os.path import basename
 
+# Import the debugger
+from python_debug_tools import Debugger
 
-# Debugging
-startTime = datetime.datetime.now()
-print_debug_lastTime = startTime.microsecond
-
-# Enable editor debug messages: (bitwise)
-#
-# 0  - Disabled debugging.
-# 1  - Basic messages.
-g_debug_level = 0
-
-g_word_autocomplete = False
-g_is_amxmodx_enabled = False
-g_use_all_autocomplete = False
+# Debugger settings: 0 - disabled, 127 - enabled
+log = Debugger( 1, os.path.basename( __file__ ) )
 
 
 # limits to prevent bogging down the system
@@ -34,104 +25,103 @@ MAX_WORDS_PER_VIEW = 100
 MAX_FIX_TIME_SECS_PER_VIEW = 0.01
 
 
+def plugin_unloaded():
+    g_settings.clear_on_change('All Autocomplete')
+
+
 def plugin_loaded():
-
     on_settings_modified();
+    g_settings.add_on_change('All Autocomplete', on_settings_modified)
 
-    userSettings = sublime.load_settings("Preferences.sublime-settings")
-    amxxSettings = sublime.load_settings("amxx.sublime-settings")
-
-    amxxSettings.add_on_change('amxx', on_settings_modified)
-    userSettings.add_on_change('Preferences', on_settings_modified)
-
-def is_amxmodx_file(view) :
-    return view.match_selector(0, 'source.sma')
-
-def is_package_enabled( userSettings, package_name ):
-
-    print_debug( 1, "is_package_enabled = " + sublime.packages_path()
-            + "/All Autocomplete/ is dir? " \
-            + str( os.path.isdir( sublime.packages_path() + "/" + package_name ) ))
-
-    print_debug( 1, "is_package_enabled = " + sublime.installed_packages_path()
-            + "/All Autocomplete.sublime-package is file? " \
-            + str( os.path.isfile( sublime.installed_packages_path() + "/" + package_name + ".sublime-package" ) ))
-
-    ignoredPackages = userSettings.get('ignored_packages')
-
-    if ignoredPackages is not None:
-
-        return ( os.path.isdir( sublime.packages_path() + "/" + package_name ) \
-                or os.path.isfile( sublime.installed_packages_path() + "/" + package_name + ".sublime-package" ) ) \
-                and not package_name in ignoredPackages
-
-    return os.path.isdir( sublime.packages_path() + "/" + package_name ) \
-            or os.path.isfile( sublime.installed_packages_path() + "/" + package_name + ".sublime-package" )
 
 def on_settings_modified():
-#{
-    print_debug( 1, "AllAutoComplete::on_settings_modified" )
-    global g_is_amxmodx_enabled
+    log( 2, "on_settings_modified" )
 
-    userSettings         = sublime.load_settings("Preferences.sublime-settings")
-    g_is_amxmodx_enabled = is_package_enabled( userSettings, "amxmodx" )
+    global g_settings
+    g_settings = sublime.load_settings('All Autocomplete.sublime-settings')
 
-    global settings
-    settings = sublime.load_settings('All Autocomplete.sublime-settings')
 
 class AllAutocomplete(sublime_plugin.EventListener):
 
-    def on_query_completions(self, view, prefix, locations):
+    def on_query_completions( self, active_view, prefix, locations ):
+        # log( 16, "AMXXEditor::on_query_completions(4)" )
 
-        if g_is_amxmodx_enabled:
-            return None
+        view_words = None
+        words_list = []
+        start_time = time.time()
 
-        if is_disabled_in(view.scope_name(locations[0])):
-            return []
+        if len( locations ) > 0:
+            view_words = active_view.extract_completions( prefix, locations[0] )
 
-        words = []
+        else:
+            view_words = active_view.extract_completions( prefix )
+
+        view_words = fix_truncation( active_view, view_words )
+
+        for word in view_words:
+            # Remove the annoying `(` on the string
+            word = word.replace('$', '\\$').split('(')[0]
+
+            if word not in words_list:
+                words_list.append( ( word, word ) )
+
+            if time.time() - start_time > 0.05:
+                break
+
+        # log( 16, "( on_query_completions ) Current views loop took: %f" % ( time.time() - start_time ) )
+        buffers_id_set = set()
+        view_base_name = None
 
         # Limit number of views but always include the active view. This
         # view goes first to prioritize matches close to cursor position.
-        other_views = [v for v in sublime.active_window().views() if v.id != view.id]
-        views = [view] + other_views
-        views = views[0:MAX_VIEWS]
+        views = sublime.active_window().views()
+        buffers_id_set.add( active_view.buffer_id() )
 
-        is_the_current_view = False
+        for view in views:
+            view_buffer_id = view.buffer_id()
+            # log( 16, "( on_query_completions ) view: %d" % view.id() )
+            # log( 16, "( on_query_completions ) buffers_id: %d" % view_buffer_id )
+            # log( 16, "( on_query_completions ) buffers_id_set size: %d" % len( buffers_id_set ) )
 
-        for v in views:
+            if view_buffer_id not in buffers_id_set:
+                buffers_id_set.add( view_buffer_id )
 
-            is_the_current_view = v.id == view.id
+                view_words     = view.extract_completions(prefix)
+                view_words     = fix_truncation(view, view_words)
+                view_base_name = view.file_name()
 
-            if len(locations) > 0 and is_the_current_view:
-                view_words = v.extract_completions(prefix, locations[0])
-            else:
-                view_words = v.extract_completions(prefix)
-            view_words = filter_words(view_words)
-            view_words = fix_truncation(v, view_words)
-            words += [(w, v) for w in view_words]
+                if view_base_name is None:
+                    view_base_name = ""
 
-        words = without_duplicates(words)
+                else:
+                    view_base_name = os.path.basename( view_base_name )
 
-        matches = []
+                for word in view_words:
+                    # Remove the annoying `(` on the string
+                    word = word.replace('$', '\\$').split('(')[0]
 
-        for w, v in words:
-            trigger = w
-            contents = w.replace('$', '\\$')
+                    if word not in words_list:
+                        # log( 16, "( on_query_completions ) word: %s" % word )
+                        words_list.append( ( word + ' \t' + view_base_name, word ) )
 
-            if v.id != view.id and v.file_name():
-                trigger += '\t(%s)' % basename(v.file_name())
-            matches.append((trigger, contents))
+                    if time.time() - start_time > 0.3:
+                        # log( 16, "( on_query_completions ) Breaking all views loop after: %f" % time.time() - start_time )
+                        return words_list
 
-        return matches
+        # log( 16, "( on_query_completions ) All views loop took: %f" % ( time.time() - start_time ) )
+        return words_list
 
 
 def is_disabled_in(scope):
-    excluded_scopes = settings.get("exclude_from_completion", [])
+    excluded_scopes = g_settings.get("exclude_from_completion", [])
+
     for excluded_scope in excluded_scopes:
+
         if scope.find(excluded_scope) != -1:
             return True
+
     return False
+
 
 def filter_words(words):
     words = words[0:MAX_WORDS_PER_VIEW]
@@ -143,10 +133,13 @@ def filter_words(words):
 def without_duplicates(words):
     result = []
     used_words = []
+
     for w, v in words:
+
         if w not in used_words:
             used_words.append(w)
             result.append((w, v))
+
     return result
 
 
@@ -163,12 +156,15 @@ def fix_truncation(view, words):
         # 'foo?' or 'bar!', which are common for instance in Ruby.
         match = view.find(r'\b' + re.escape(w) + r'\b', 0)
         truncated = is_empty_match(match)
+
         if truncated:
             #Truncation is always by a single character, so we extend the word by one word character before a word boundary
             extended_words = []
             view.find_all(r'\b' + re.escape(w) + r'\w\b', 0, "$0", extended_words)
+
             if len(extended_words) > 0:
                 fixed_words += extended_words
+
             else:
                 # to compensate for the missing match problem mentioned above, just
                 # use the old word if we didn't find any extended matches
@@ -186,30 +182,13 @@ def fix_truncation(view, words):
 
 
 if sublime.version() >= '3000':
+
     def is_empty_match(match):
         return match.empty()
+
 else:
     plugin_loaded()
+
     def is_empty_match(match):
         return match is None
-
-
-def print_debug(level, msg) :
-#{
-    global print_debug_lastTime
-    currentTime = datetime.datetime.now().microsecond
-
-    # You can access global variables without the global keyword.
-    if g_debug_level & level != 0:
-
-        print( "[AMXX-Editor] " \
-                + str( datetime.datetime.now().hour ) + ":" \
-                + str( datetime.datetime.now().minute ) + ":" \
-                + str( datetime.datetime.now().second ) + ":" \
-                + str( currentTime ) \
-                + "%7s " % str( currentTime - print_debug_lastTime ) \
-                + msg )
-
-        print_debug_lastTime = currentTime
-
 
