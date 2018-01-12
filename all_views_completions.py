@@ -10,10 +10,10 @@ import os
 from os.path import basename
 
 # Import the debugger
-from python_debug_tools import Debugger
+from python_debug_tools import getLogger
 
 # Debugger settings: 0 - disabled, 127 - enabled
-log = Debugger( 1, os.path.basename( __file__ ) )
+log = getLogger( 1, os.path.basename( __file__ ) )
 
 
 # limits to prevent bogging down the system
