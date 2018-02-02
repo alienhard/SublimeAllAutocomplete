@@ -39,7 +39,7 @@ class AllAutocomplete(sublime_plugin.EventListener):
     def on_query_completions( self, active_view, prefix, locations ):
         # log( 16, "" )
 
-        if is_disabled_in(view.scope_name(locations[0])):
+        if is_disabled_in(active_view.scope_name(locations[0])):
             return []
 
         view_words = None
