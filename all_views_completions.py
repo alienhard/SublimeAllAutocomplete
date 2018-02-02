@@ -5,23 +5,16 @@ import sublime_plugin
 import sublime
 import re
 import time
-import datetime
-import os
+
 from os.path import basename
 
 # Import the debugger
 from debug_tools import getLogger
 
 # Debugger settings: 0 - disabled, 127 - enabled
-log = getLogger( 1, os.path.basename( __file__ ) )
-
+log = getLogger( 1, basename( __file__ ) )
 
 # limits to prevent bogging down the system
-MIN_WORD_SIZE = 3
-MAX_WORD_SIZE = 50
-
-MAX_VIEWS = 20
-MAX_WORDS_PER_VIEW = 100
 MAX_FIX_TIME_SECS_PER_VIEW = 0.01
 
 
@@ -44,7 +37,10 @@ def on_settings_modified():
 class AllAutocomplete(sublime_plugin.EventListener):
 
     def on_query_completions( self, active_view, prefix, locations ):
-        # log( 16, "AMXXEditor::on_query_completions(4)" )
+        # log( 16, "" )
+
+        if is_disabled_in(view.scope_name(locations[0])):
+            return []
 
         view_words = None
         words_list = []
@@ -58,6 +54,7 @@ class AllAutocomplete(sublime_plugin.EventListener):
 
         view_words = fix_truncation( active_view, view_words )
 
+        # This view goes first to prioritize matches close to cursor position.
         for word in view_words:
             # Remove the annoying `(` on the string
             word = word.replace('$', '\\$').split('(')[0]
@@ -68,47 +65,45 @@ class AllAutocomplete(sublime_plugin.EventListener):
             if time.time() - start_time > 0.05:
                 break
 
-        # log( 16, "( on_query_completions ) Current views loop took: %f" % ( time.time() - start_time ) )
+        # log( 16, "Current views loop took: %f" % ( time.time() - start_time ) )
         buffers_id_set = set()
         view_base_name = None
 
-        # Limit number of views but always include the active view. This
-        # view goes first to prioritize matches close to cursor position.
         views = sublime.active_window().views()
         buffers_id_set.add( active_view.buffer_id() )
 
         for view in views:
             view_buffer_id = view.buffer_id()
-            # log( 16, "( on_query_completions ) view: %d" % view.id() )
-            # log( 16, "( on_query_completions ) buffers_id: %d" % view_buffer_id )
-            # log( 16, "( on_query_completions ) buffers_id_set size: %d" % len( buffers_id_set ) )
+            # log( 16, "view: %d" % view.id() )
+            # log( 16, "buffers_id: %d" % view_buffer_id )
+            # log( 16, "buffers_id_set size: %d" % len( buffers_id_set ) )
 
             if view_buffer_id not in buffers_id_set:
                 buffers_id_set.add( view_buffer_id )
-
-                view_words     = view.extract_completions(prefix)
-                view_words     = fix_truncation(view, view_words)
                 view_base_name = view.file_name()
+
+                view_words = view.extract_completions(prefix)
+                view_words = fix_truncation(view, view_words)
 
                 if view_base_name is None:
                     view_base_name = ""
 
                 else:
-                    view_base_name = os.path.basename( view_base_name )
+                    view_base_name = basename( view_base_name )
 
                 for word in view_words:
                     # Remove the annoying `(` on the string
                     word = word.replace('$', '\\$').split('(')[0]
 
                     if word not in words_list:
-                        # log( 16, "( on_query_completions ) word: %s" % word )
+                        # log( 16, "word: %s" % word )
                         words_list.append( ( word + ' \t' + view_base_name, word ) )
 
                     if time.time() - start_time > 0.3:
-                        # log( 16, "( on_query_completions ) Breaking all views loop after: %f" % time.time() - start_time )
+                        # log( 16, "Breaking all views loop after: %f" % time.time() - start_time )
                         return words_list
 
-        # log( 16, "( on_query_completions ) All views loop took: %f" % ( time.time() - start_time ) )
+        # log( 16, "All views loop took: %f" % ( time.time() - start_time ) )
         return words_list
 
 
@@ -121,26 +116,6 @@ def is_disabled_in(scope):
             return True
 
     return False
-
-
-def filter_words(words):
-    words = words[0:MAX_WORDS_PER_VIEW]
-    return [w for w in words if MIN_WORD_SIZE <= len(w) <= MAX_WORD_SIZE]
-
-
-# keeps first instance of every word and retains the original order
-# (n^2 but should not be a problem as len(words) <= MAX_VIEWS*MAX_WORDS_PER_VIEW)
-def without_duplicates(words):
-    result = []
-    used_words = []
-
-    for w, v in words:
-
-        if w not in used_words:
-            used_words.append(w)
-            result.append((w, v))
-
-    return result
 
 
 # Ugly workaround for truncation bug in Sublime when using view.extract_completions()
