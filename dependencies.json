@@ -1,7 +1,7 @@
 {
     "*": {
         "*": [
-            "debug_tools"
+            "DebugTools"
         ]
     }
 }
