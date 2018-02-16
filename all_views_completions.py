@@ -42,7 +42,6 @@ class AllAutocomplete(sublime_plugin.EventListener):
         if is_disabled_in(active_view.scope_name(locations[0])):
             return []
 
-        view_words = None
         words_list = []
         start_time = time.time()
 
