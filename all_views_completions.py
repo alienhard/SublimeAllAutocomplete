@@ -68,7 +68,12 @@ class AllAutocomplete(sublime_plugin.EventListener):
         buffers_id_set = set()
         view_base_name = None
 
-        views = sublime.active_window().views()
+        views = []
+        windows = sublime.windows()
+
+        for window in windows:
+            views.extend(window.views())
+
         buffers_id_set.add( active_view.buffer_id() )
 
         for view in views:
