@@ -42,8 +42,9 @@ class AllAutocomplete(sublime_plugin.EventListener):
         if is_disabled_in(active_view.scope_name(locations[0])):
             return []
 
-        words_list = []
-        start_time = time.time()
+        words_list       = []
+        words_list_clean = []
+        start_time       = time.time()
 
         if len( locations ) > 0:
             view_words = active_view.extract_completions( prefix, locations[0] )
@@ -58,8 +59,9 @@ class AllAutocomplete(sublime_plugin.EventListener):
             # Remove the annoying `(` on the string
             word = word.replace('$', '\\$').split('(')[0]
 
-            if word not in words_list:
+            if word not in words_list_clean:
                 words_list.append( ( word, word ) )
+                words_list_clean.append( word )
 
             if time.time() - start_time > 0.05:
                 break
@@ -99,9 +101,10 @@ class AllAutocomplete(sublime_plugin.EventListener):
                     # Remove the annoying `(` on the string
                     word = word.replace('$', '\\$').split('(')[0]
 
-                    if word not in words_list:
+                    if word not in words_list_clean:
                         # log( 16, "word: %s" % word )
                         words_list.append( ( word + ' \t' + view_base_name, word ) )
+                        words_list_clean.append( word )
 
                     if time.time() - start_time > 0.3:
                         # log( 16, "Breaking all views loop after: %f" % time.time() - start_time )
