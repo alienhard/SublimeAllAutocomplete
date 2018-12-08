@@ -4,14 +4,14 @@
             "python-pywin32",
             "PortalockerFiles",
             "ConcurrentLogHandler",
-            "DebugTools"
+            "debugtools"
         ]
     },
     "*": {
         "*": [
             "PortalockerFiles",
             "ConcurrentLogHandler",
-            "DebugTools"
+            "debugtools"
         ]
     }
 }
