@@ -7,9 +7,6 @@ import re
 import time
 from os.path import basename
 
-# limits to prevent bogging down the system
-MIN_WORD_SIZE = 3
-MAX_WORD_SIZE = 50
 
 MAX_VIEWS = 20
 MAX_WORDS_PER_VIEW = 100
@@ -70,6 +67,8 @@ def is_excluded(scope, excluded_scopes):
 
 
 def filter_words(words):
+    MIN_WORD_SIZE = settings.get("min_word_size", 3)
+    MAX_WORD_SIZE = settings.get("max_word_size", 50)
     return [w for w in words if MIN_WORD_SIZE <= len(w) <= MAX_WORD_SIZE][0:MAX_WORDS_PER_VIEW]
 
 
