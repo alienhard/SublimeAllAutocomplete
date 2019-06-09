@@ -62,19 +62,18 @@ def is_disabled_in(scope):
             return True
     return False
 
+
 def filter_words(words):
-    words = words[0:MAX_WORDS_PER_VIEW]
-    return [w for w in words if MIN_WORD_SIZE <= len(w) <= MAX_WORD_SIZE]
+    return [w for w in words if MIN_WORD_SIZE <= len(w) <= MAX_WORD_SIZE][0:MAX_WORDS_PER_VIEW]
 
 
-# keeps first instance of every word and retains the original order
-# (n^2 but should not be a problem as len(words) <= MAX_VIEWS*MAX_WORDS_PER_VIEW)
+# keeps first instance of every word and retains the original order, O(n)
 def without_duplicates(words):
     result = []
-    used_words = []
+    used_words = set()
     for w, v in words:
         if w not in used_words:
-            used_words.append(w)
+            used_words.add(w)
             result.append((w, v))
     return result
 
