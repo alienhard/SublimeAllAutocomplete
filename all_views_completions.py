@@ -20,12 +20,13 @@ def plugin_loaded():
     global settings
     settings = sublime.load_settings('All Autocomplete.sublime-settings')
 
+
 class AllAutocomplete(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
         if is_disabled_in(view.scope_name(locations[0])):
             return []
-         
+
         words = []
 
         # Limit number of views but always include the active view. This
@@ -51,6 +52,8 @@ class AllAutocomplete(sublime_plugin.EventListener):
             contents = w.replace('$', '\\$')
             if v.id != view.id and v.file_name():
                 trigger += '\t(%s)' % basename(v.file_name())
+            if v.id == view.id:
+                trigger += '\tabc'
             matches.append((trigger, contents))
         return matches
 
