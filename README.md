@@ -22,12 +22,15 @@ Settings
 
 You can disable the additional autocompletion provided by this package for specific source files and even select syntax within files. In the Sublime menu go to Preferences > Package Settings > All Autocomplete > Settings – User.
 
-Example: the following Setting would disable All Autocomplete for CSS and JavaScript code:
+Example: the following Setting would disable completions when you're editing CSS or JavaScript code, and would not source any completions from Markdown files:
 
 ```
 "exclude_from_completion": [
 	"css",
 	"js"
+],
+"exclude_sources": [
+  "markdown"
 ]
 ```
 

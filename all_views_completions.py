@@ -24,14 +24,18 @@ def plugin_loaded():
 class AllAutocomplete(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
-        if is_disabled_in(view.scope_name(locations[0])):
+        if is_excluded(view.scope_name(locations[0]), settings.get("exclude_from_completion", [])):
             return []
 
         words = []
 
         # Limit number of views but always include the active view. This
         # view goes first to prioritize matches close to cursor position.
-        other_views = [v for v in sublime.active_window().views() if v.id != view.id]
+        other_views = [
+            v
+            for v in sublime.active_window().views()
+            if v.id != view.id and not is_excluded(v.scope_name(0), settings.get("exclude_sources", []))
+        ]
         views = [view] + other_views
         views = views[0:MAX_VIEWS]
 
@@ -58,10 +62,9 @@ class AllAutocomplete(sublime_plugin.EventListener):
         return matches
 
 
-def is_disabled_in(scope):
-    excluded_scopes = settings.get("exclude_from_completion", [])
+def is_excluded(scope, excluded_scopes):
     for excluded_scope in excluded_scopes:
-        if scope.find(excluded_scope) != -1:
+        if excluded_scope in scope:
             return True
     return False
 
