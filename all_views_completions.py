@@ -7,9 +7,6 @@ import re
 import time
 from os.path import basename
 
-# limits to prevent bogging down the system
-MIN_WORD_SIZE = 3
-MAX_WORD_SIZE = 50
 
 MAX_VIEWS = 20
 MAX_WORDS_PER_VIEW = 100
@@ -20,17 +17,22 @@ def plugin_loaded():
     global settings
     settings = sublime.load_settings('All Autocomplete.sublime-settings')
 
+
 class AllAutocomplete(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
-        if is_disabled_in(view.scope_name(locations[0])):
+        if is_excluded(view.scope_name(locations[0]), settings.get("exclude_from_completion", [])):
             return []
-         
+
         words = []
 
         # Limit number of views but always include the active view. This
         # view goes first to prioritize matches close to cursor position.
-        other_views = [v for v in sublime.active_window().views() if v.id != view.id]
+        other_views = [
+            v
+            for v in sublime.active_window().views()
+            if v.id != view.id and not is_excluded(v.scope_name(0), settings.get("exclude_sources", []))
+        ]
         views = [view] + other_views
         views = views[0:MAX_VIEWS]
 
@@ -51,30 +53,32 @@ class AllAutocomplete(sublime_plugin.EventListener):
             contents = w.replace('$', '\\$')
             if v.id != view.id and v.file_name():
                 trigger += '\t(%s)' % basename(v.file_name())
+            if v.id == view.id:
+                trigger += '\tabc'
             matches.append((trigger, contents))
         return matches
 
 
-def is_disabled_in(scope):
-    excluded_scopes = settings.get("exclude_from_completion", [])
+def is_excluded(scope, excluded_scopes):
     for excluded_scope in excluded_scopes:
-        if scope.find(excluded_scope) != -1:
+        if excluded_scope in scope:
             return True
     return False
 
+
 def filter_words(words):
-    words = words[0:MAX_WORDS_PER_VIEW]
-    return [w for w in words if MIN_WORD_SIZE <= len(w) <= MAX_WORD_SIZE]
+    MIN_WORD_SIZE = settings.get("min_word_size", 3)
+    MAX_WORD_SIZE = settings.get("max_word_size", 50)
+    return [w for w in words if MIN_WORD_SIZE <= len(w) <= MAX_WORD_SIZE][0:MAX_WORDS_PER_VIEW]
 
 
-# keeps first instance of every word and retains the original order
-# (n^2 but should not be a problem as len(words) <= MAX_VIEWS*MAX_WORDS_PER_VIEW)
+# keeps first instance of every word and retains the original order, O(n)
 def without_duplicates(words):
     result = []
-    used_words = []
+    used_words = set()
     for w, v in words:
         if w not in used_words:
-            used_words.append(w)
+            used_words.add(w)
             result.append((w, v))
     return result
 
