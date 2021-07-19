@@ -33,10 +33,8 @@ class AllAutocomplete(sublime_plugin.EventListener):
             for v in sublime.active_window().views()
             if v.id != view.id and not is_excluded(v.scope_name(0), settings.get("exclude_sources", []))
         ]
-        views = [view] + other_views
-        views = views[0:MAX_VIEWS]
 
-        for v in views:
+        for v in [view, *other_views][0:MAX_VIEWS]:
             if len(locations) > 0 and v.id == view.id:
                 view_words = v.extract_completions(prefix, locations[0])
             else:
